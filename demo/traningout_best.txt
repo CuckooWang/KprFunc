@@ -1,5 +1,5 @@
-#GPS-PRO 1.0 Parameters
-#Version: 1.0(20190926)
+#GPS-Uber 1.0 Parameters
+#Version: 1.0
 #By Chenwei Wang    @HUST
 @param	Code=K	Up=30	Down=30
 @AUC=0.9118991706833974
