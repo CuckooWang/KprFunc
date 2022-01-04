@@ -1,29 +1,27 @@
 from Tools import blosum62
 import numpy as np
-from Tools import logistic_GPS
 from sklearn.metrics import roc_auc_score
+from sklearn.linear_model import LogisticRegressionCV
+from sklearn.linear_model import LogisticRegression
 
 def trainning():
     length = 30
     fold = 10
-    f1 = open("POS.txt", "r")
-    f2 = open("NEG.txt", "r")
-
+    f1 = open(r"POS.txt", "r")
+    f2 = open(r"NEG.txt", "r")
     pos = set()
     neg = set()
-    print("Reading positive dataset")
     for line in f1.readlines():
         sp = line.strip().split("\t")
         pep = sp[0]
         pos.add(pep)
-    print("Reading negative dataset")
     for line in f2.readlines():
         sp = line.strip().split("\t")
         pep = sp[0]
         if pep not in pos:
             neg.add(pep)
 
-    print("The first round of training。。。。。。。。。。。。。")
+    print("Frist round。。。。。。。。。。。。。")
     AAscores, l_aas, AAs = blosum62()
     l_scores, l_type,l_peps = getWeightScoreType(pos, neg, AAscores, AAs,length)
     raw_scores = []
@@ -32,12 +30,11 @@ def trainning():
         for j in range(len(l_scores[i])):
             total += l_scores[i][j]
         raw_scores.append(total)
-    R = np.array(raw_scores)
     X = np.array(l_scores)
     Y = np.array(l_type)
     PEP = np.array(l_peps)
-    raw_auc = roc_auc_score(Y, R)
-    weight_coef, weight_auc = logistic_GPS(X, Y,PEP,"WW",0,fold)
+    weight_coef, weight_auc = logistic_GPS(X, Y,PEP,"WW",0)
+    print("First weight AUC：" + str(weight_auc))
     #MM training
     l_scores, l_type,peps = getMMScoreType(pos, neg, AAscores, weight_coef, l_aas, AAs,length)
     raw_scores = []
@@ -46,37 +43,42 @@ def trainning():
         for j in range(len(l_scores[i])):
             total += l_scores[i][j]
         raw_scores.append(total)
-    R = np.array(raw_scores)
     X = np.array(l_scores)
     Y = np.array(l_type)
     PEP = np.array(l_peps)
-    MM_coef,MM_auc= logistic_GPS(X, Y,PEP,"MM",0,fold)
+    MM_coef,MM_auc= logistic_GPS(X, Y,PEP,"MM",0)
+    print("First matix AUC：" + str(MM_auc))
     best_weight_auc = weight_auc
     best_MM_auc = MM_auc
+
     file = "traningout_first_" + str(fold) + ".txt"
-    writeParameter_MM(file, length, length, AAscores, l_aas, weight_coef, MM_coef, MM_auc)
+    # AAscores和MM_coef的乘积才是最终的矩阵，所以矩阵要在更新之前
+    writeParameter_MM(file, 10, 10, AAscores, l_aas, weight_coef, MM_coef, MM_auc)
+
     AAscores = newAAScore(AAscores, l_aas, AAs, MM_coef)
     for i in range(100)[1:]:
-        print("The" + str(i + 1) + "th round of training。。。。。。。。。。。。。")
+        print("The " + str(i + 1) + "th trainning")
         l_scores, l_type,l_peps = getWeightScoreType(pos, neg, AAscores, AAs, length)
         X = np.array(l_scores)
         Y = np.array(l_type)
         PEP = np.array(l_peps)
-        weight_coef, weight_auc = logistic_GPS(X, Y,PEP,"WW",i,fold)
+        weight_coef, weight_auc = logistic_GPS(X, Y,PEP,"WW",i)
         if weight_auc > best_weight_auc:
             best_weight_auc = weight_auc
             file2 = "traningout_weight_best_" + str(fold) + "_" + str(i+1) + ".txt"
-            writeParameter_WW(file2, length, length, AAscores, l_aas, weight_coef, weight_auc)
+            writeParameter_WW(file2, 30, 30, AAscores, l_aas, weight_coef, weight_auc)
         # MM training
         l_scores, l_type, peps = getMMScoreType(pos, neg, AAscores, weight_coef, l_aas, AAs, length)
         X = np.array(l_scores)
         Y = np.array(l_type)
         PEP = np.array(l_peps)
-        MM_coef, MM_auc = logistic_GPS(X, Y,PEP,"MM",i,fold)
+        MM_coef, MM_auc = logistic_GPS(X, Y,PEP,"MM",i)
+        print("The " + str(i + 1) + "round AUC：" + str(MM_auc))
         if MM_auc > best_MM_auc:
             best_MM_auc = MM_auc
             file2 = "traningout_MM_best_" + str(fold) + "_" + str(i+1) + ".txt"
-            writeParameter_MM(file2, length, length, AAscores, l_aas, weight_coef, MM_coef, MM_auc)
+            # AAscores和MM_coef的乘积才是最终的矩阵，所以矩阵要在更新之前
+            writeParameter_MM(file2, 30, 30, AAscores, l_aas, weight_coef, MM_coef, MM_auc)
         else:
             break
         AAscores = newAAScore(AAscores, l_aas, AAs, MM_coef)
@@ -90,6 +92,7 @@ def newAAScore(AAscores, l_aas, AAs, MM_coef):
         newscore = score * mweight
         dict_weight[aas] = newscore
     return dict_weight
+
 
 def getWeightScoreType(pos, neg, matrix, AAs,length):
     scores = []
@@ -124,6 +127,7 @@ def getWeightScoreType(pos, neg, matrix, AAs,length):
         l_type.append(1)
         l_peps.append(pep)
 
+    # num = 0
     for pep in neg:
         score = []
         for i in range(len(pep)):
@@ -162,10 +166,12 @@ def getMMScoreType(pos, neg, matrix, weights, l_aas, AAs,length):
             index2 = l_aas.index(aa1 + "_" + aa1)
             score[index2] -= matrix[aa1 + "_" + aa1] * weights[i]
             scorepos = np.array(score)
+
             score_pos.append(scorepos)
             score_neg.append(scoreneg)
         scorespos.append(score_pos)
         scoresneg.append(score_neg)
+
     l_scores = []
     l_type = []
     l_peps = []
@@ -184,6 +190,7 @@ def getMMScoreType(pos, neg, matrix, weights, l_aas, AAs,length):
         l_type.append(1)
         l_peps.append(pep)
 
+    # num = 0
     for pep in neg:
         score = getArray(l_aas)
         for i in range(len(pep)):
@@ -217,7 +224,7 @@ def writeParameter_WW(file,left,right,AAscores,l_aas,weight_coef,weight_auc):
         aas = l_aas[i]
         score = AAscores[aas]
         dict_weight[aas] = score
-    fw.write("#GPS-Uber 1.0 Parameters\n")
+    fw.write("#KprFunc 1.0 Parameters\n")
     fw.write("#Version: 1.0\n")
     fw.write("#By Chenwei Wang    @HUST\n")
     fw.write("@param\tCode=K\tUp=" + str(left) + "\tDown=" + str(right) + "\n")
@@ -245,7 +252,7 @@ def writeParameter_WW(file,left,right,AAscores,l_aas,weight_coef,weight_auc):
             elif aas2 in dict_weight:
                 score = dict_weight[aas2]
             else:
-                print(aas1 + "no score!!")
+                print(aas1 + "wrong!")
             fw.write(" " + str(score))
         fw.write("\n")
 
@@ -263,7 +270,7 @@ def writeParameter_MM(file,left,right,AAscores,l_aas,weight_coef,MM_coef,MM_auc)
         mweight = MM_coef[i]
         newscore = score * mweight
         dict_weight[aas] = newscore
-    fw.write("#GPS-Uber 1.0 Parameters\n")
+    fw.write("#KprFunc 1.0 Parameters\n")
     fw.write("#Version: 1.0\n")
     fw.write("#By Chenwei Wang    @HUST\n")
     fw.write("@param\tCode=K\tUp=" + str(left) + "\tDown=" + str(right) + "\n")
@@ -291,17 +298,27 @@ def writeParameter_MM(file,left,right,AAscores,l_aas,weight_coef,MM_coef,MM_auc)
             elif aas2 in dict_weight:
                 score = dict_weight[aas2]
             else:
-                print(aas1 + "no score!!")
+                print(aas1 + "wrong!")
             fw.write(" " + str(score))
         fw.write("\n")
 
     fw.flush()
     fw.close()
 
-
+def logistic_GPS(X: bytearray, Y: bytearray,PEP,type,turn):
+    solverchose = 'sag'
+    clscv = LogisticRegressionCV(max_iter=10000, cv=10, solver=solverchose,scoring='roc_auc')
+    clscv.fit(X, Y)
+    #regularization = clscv.C_[0]
+    regularization = clscv.C_[0] * (10**(-turn))
+    print("C=" + str(regularization))
+    cls = LogisticRegression(max_iter=10000,solver=solverchose,C=regularization)
+    cls.fit(X, Y)
+    list_coef = cls.coef_[0]
+    predict_prob_x = cls.predict_proba(X)
+    predict_x = predict_prob_x[:, 1]
+    auc = roc_auc_score(Y,np.array(predict_x))
+    print("AUC:" + str(auc))
+    return list_coef,auc
 
 trainning()
-
-
-
-
