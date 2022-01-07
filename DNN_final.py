@@ -61,7 +61,7 @@ def dnn(X,Y,nfold,parameter,PEP):
         X_train, X_test = X[train_index], X[test_index]
         Y_train, Y_test = Y[train_index], Y[test_index]
         model = create_model(parameter)
-        model.fit(X_train, Y_train, epochs=1000, batch_size=1024,validation_data=(X_test,Y_test),verbose=1,
+        model.fit(X_train, Y_train, epochs=300, batch_size=100,validation_data=(X_test,Y_test),verbose=1,
                   callbacks=[EarlyStopping(monitor="val_auc", mode="max", min_delta=0, patience=30),
                              ModelCheckpoint(str(num) +'.model', monitor="val_auc", mode="max", save_best_only=True)])
         model = load_model(str(num) +".model")
