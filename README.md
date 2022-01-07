@@ -25,10 +25,10 @@ All codes and softwares could run on a "normal" desktop computer, no non-standar
 All codes can run directly on a "normal" computer with Python 3.7.9 installed, no extra installation is required
 
 ## Instruction
-For users who want to run iKPr in own computer, you should first get the optimal postion weights and similarity matrix usding GPS 5.0M.py with the posive dataset and negtive dataset in /demo, then the best output of GPS 5.0M.py will be adopted for DNN.final to generate the final models. 
+For users who want to run KprFunc in own computer, you should first get the optimal postion weights and similarity matrix usding GPS 5.0M.py with the posive dataset and negtive dataset in /demo, then the best output of GPS 5.0M.py will be adopted for DNN.final to generate the models for the prediction of propionlytion site. Finally, the known functional propionylation sites contained in "functionsite" would be taken as secondary positive data while other propionylation sites as negative data to generate the models for the functional propionylation sites with MAML.py
 
 ## Additional information
-Expected run time is depended on the hardwares of your computer. In general, it will take about 30 minutes to get the final models.
+Expected run time is depended on the hardwares of your computer. In general, it will take about 1 hour to get the final models.
 ## Contact
 Dr. Yu Xue: xueyu@hust.edu.cn  
 Dr. Luoying Zhang: zhangluoying@hust.edu.cn  
