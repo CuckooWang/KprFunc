@@ -1,16 +1,4 @@
-from sklearn.linear_model import LogisticRegressionCV
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import roc_auc_score
-from sklearn.model_selection import StratifiedKFold
-from sklearn.utils import class_weight
-from keras import metrics
 import numpy as np
-from keras import backend as K
-from keras import optimizers
-from keras.models import Sequential,load_model
-from keras.layers import Dense, Dropout
-from keras.callbacks import EarlyStopping,ModelCheckpoint
-
 def blosum62():
     f1 = open("BLOSUM62","r")
     l_AAS = []
@@ -37,37 +25,119 @@ def blosum62():
         num += 1
     return scores,l_AAS,AAs
 
-def logistic_GPS(X: bytearray, Y: bytearray,PEP,type,turn,fold):
-    best_coef = []
-    best_auc=0
-    solverchose = 'liblinear'
-    Y_last = []
-    Score_last = []
-    num = 0
-    skf = StratifiedKFold(n_splits=fold)
-    for train_index, test_index in skf.split(X,Y):
-        num += 1
-        print("lg_" + str(num))
-        X_train, X_test = X[train_index], X[test_index]
-        Y_train, Y_test = Y[train_index], Y[test_index]
-        clscv = LogisticRegressionCV(max_iter=10000, cv=10, solver=solverchose,scoring='roc_auc')
-        clscv.fit(X_train, Y_train)
-        regularization = clscv.C_[0] * (100**(-turn))
-        print("C=" + str(regularization))
-        cls = LogisticRegression(max_iter=10000,solver=solverchose,C=regularization)
-        cls.fit(X_train, Y_train)
-        list_coef = cls.coef_[0]
-        predict_prob_x = cls.predict_proba(X_test)
-        predict_x = predict_prob_x[:, 1]
-        tem_auc = roc_auc_score(Y_test,np.array(predict_x))
-        if tem_auc > best_auc:
-            best_auc = tem_auc
-            best_coef = list_coef
-        Y_last = np.hstack((Y_last, Y_test))
-        Score_last = np.hstack((Score_last, predict_x))
-    auc = roc_auc_score(np.array(Y_last), np.array(Score_last))
+def getWeightScoreType(pos, neg, matrix, AAs,length):
+    scores = []
+    for i in range(length*2+1):
+        pos_score = []
+        for j in range(len(AAs)):
+            aa1 = AAs[j]
+            score = 0.0
+            for oth in pos:
+                aa2 = oth[i:i + 1]
+                aas = aa1 + "_" + aa2
+                aas2 = aa2 + "_" + aa1
+                if aas in matrix:
+                    score += matrix[aas]
+                else:
+                    score += matrix[aas2]
+            pos_score.append(score)
+        scores.append(pos_score)
 
-    return best_coef,auc
+    l_scores = []
+    l_type = []
+    l_peps = []
+
+    for pep in pos:
+        score = []
+        for i in range(len(pep)):
+            aa = pep[i:i + 1]
+            index = AAs.index(aa)
+            aascore = (scores[i][index] - matrix[aa + "_" + aa]) / (len(pos) - 1)
+            score.append(aascore)
+        l_scores.append(score)
+        l_type.append(1)
+        l_peps.append(pep)
+
+    # num = 0
+    for pep in neg:
+        score = []
+        for i in range(len(pep)):
+            aa = pep[i:i + 1]
+            index = AAs.index(aa)
+            aascore = scores[i][index] / len(pos)
+            score.append(aascore)
+        l_scores.append(score)
+        l_type.append(0)
+        l_peps.append(pep)
+    return l_scores, l_type,l_peps
+
+def getMMScoreType(pos, neg, matrix, weights, l_aas, AAs, length):
+    scorespos = []
+    scoresneg = []
+    for i in range(length * 2 + 1):
+        score_pos = []
+        score_neg = []
+        for j in range(len(AAs)):
+            aa1 = AAs[j]
+            score = []
+            for z in range(len(l_aas)):
+                score.append(0.0)
+            for oth in pos:
+                aa2 = oth[i:i + 1]
+                aas1 = aa1 + "_" + aa2
+                aas2 = aa2 + "_" + aa1
+                if aas1 in l_aas:
+                    index = l_aas.index(aas1)
+                    score[index] += matrix[aas1] * weights[i]
+                elif aas2 in l_aas:
+                    index = l_aas.index(aas2)
+                    score[index] += matrix[aas2] * weights[i]
+            scoreneg = np.array(score)
+            index2 = l_aas.index(aa1 + "_" + aa1)
+            score[index2] -= matrix[aa1 + "_" + aa1] * weights[i]
+            scorepos = np.array(score)
+
+            score_pos.append(scorepos)
+            score_neg.append(scoreneg)
+        scorespos.append(score_pos)
+        scoresneg.append(score_neg)
+
+    l_scores = []
+    l_type = []
+    l_peps = []
+
+    for pep in pos:
+        score = getArray(l_aas)
+        for i in range(len(pep)):
+            aa = pep[i:i + 1]
+            index = AAs.index(aa)
+            scoreary = scorespos[i][index]
+            score += scoreary
+        score = (score / (len(pos) - 1)).tolist()
+        l_scores.append(score)
+        l_type.append(1)
+        l_peps.append(pep)
+
+    for pep in neg:
+        score = getArray(l_aas)
+        for i in range(len(pep)):
+            aa = pep[i:i + 1]
+            index = AAs.index(aa)
+            scoreary = scoresneg[i][index]
+            score += scoreary
+        score = (score / len(pos)).tolist()
+        l_scores.append(score)
+        l_type.append(0)
+        l_peps.append(pep)
+    return l_scores, l_type, l_peps
+
+def getArray(l_aas):
+    score = []
+    for i in range(len(l_aas)):
+        score.append(0.0)
+    scoreary = np.array(score)
+
+    return scoreary
 
 def WeightAndMatrix(path):
     f1 = open(path, "r")
@@ -86,6 +156,7 @@ def WeightAndMatrix(path):
             for i in range(len(sp))[1:]:
                 w = float(sp[i])
                 weights.append(w)
+
     num = 0
     f1 = open(path, "r")
     t = False
@@ -106,49 +177,3 @@ def WeightAndMatrix(path):
         if line.startswith(" A "):
             t = True
     return scores, l_AAS, weights, AAs
-
-def dnn(X,Y,nfold,parameter,PEP):
-    skf = StratifiedKFold(n_splits=nfold)
-    num = 0
-    best_auc = 0.0
-    best_model = 0
-    Y_last = []
-    Score_last = []
-    for train_index, test_index in skf.split(X, Y):
-        num += 1
-        print("dnn_" + str(num))
-        X_train, X_test = X[train_index], X[test_index]
-        Y_train, Y_test = Y[train_index], Y[test_index]
-        my_class_weight = class_weight.compute_class_weight('balanced'
-                                                            , np.unique(Y_train)
-                                                            , Y_train).tolist()
-        class_weight_dict = dict(zip([x for x in np.unique(Y_train)], my_class_weight))
-        model = create_model(parameter)
-        model.fit(X_train, Y_train, epochs=1000, batch_size=100,validation_data=(X_test,Y_test),verbose=1,class_weight=class_weight_dict,
-                  callbacks=[EarlyStopping(monitor="val_auc", mode="max", min_delta=0, patience=100),
-                             ModelCheckpoint(str(num) +'.model', monitor="val_auc", mode="max", save_best_only=True)])
-        model = load_model(str(num) +".model")
-        predict_x = model.predict(X_test)[:, 0]
-        auc = roc_auc_score(Y_test, predict_x)
-        if auc > best_auc:
-            best_auc = auc
-            best_model = num
-        Y_last.extend(Y_test)
-        Score_last.extend(predict_x)
-        K.clear_session()
-    auc_all = roc_auc_score(np.array(Y_last), np.array(Score_last))
-    return auc_all,best_model
-
-def create_model(parameter):
-    model = Sequential()
-    model.add(Dense(parameter[0], activation='linear', input_dim=parameter[3]))
-    model.add(Dropout(parameter[1]))
-    for i in range(parameter[2]):
-        fold = 2 ** (i+1)
-        model.add(Dense(parameter[0] / fold,activation='linear'))
-        model.add(Dropout(parameter[1]))
-    model.add(Dense(1, activation='sigmoid'))
-    model.compile(optimizer=optimizers.Adam(lr=1e-3,decay=3e-5), loss='binary_crossentropy', metrics=[metrics.AUC(name="auc")])
-    model.summary()
-
-    return model
