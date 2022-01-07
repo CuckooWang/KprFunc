@@ -1,11 +1,13 @@
-# iKPr
-A hybrid-learning framework for the prediction of propionylation site 
+# KprFunc
+A hybrid-learning AI framework for the prediction of functional propionylation site 
 
 ## The description of each source code
 ### GPS 5.0M.py
 The position weight determination (PWD) and scoring matrix optimization (SMO) methods were adopted iteratively to generate the optimal postion weights and similarity matrix
 ### DNN_final.py
-A 4-layer DNN framework was implemented in Keras 2.4.3 (http://github.com/fchollet/keras) to general the final model based on the parameters determined by GPS 5.0M.py
+A 4-layer DNN framework was implemented in Keras 2.4.3 (http://github.com/fchollet/keras) to general the final model for the prediciton of propionylation sites based on the parameters determined by GPS 5.0M.py
+### MAML.py
+A 4-layer DNN framework implemented by a MAML strategy to general the model for the prediciton of functional propionylation sites
 ### Tools.py
 Supported methods for GPS 5.0M.py and DNN_final.py
 ### demo
