@@ -322,3 +322,7 @@ def logistic_GPS(X: bytearray, Y: bytearray,PEP,type,turn):
     return list_coef,auc
 
 trainning()
+
+
+
+
