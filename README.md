@@ -16,7 +16,7 @@ A small dataset to demo above codes, including the postive & negative dataset, t
 ## Software Requirements
 ### OS Requirements
 Above codes have been tested on the following systems:  
-Windows: Windows 7, Windos 10  
+Windows: Windows7, Windos10  
 Linux: CentOS linux 7.8.2003  
 ### Hardware Requirements
 All codes and softwares could run on a "normal" desktop computer, no non-standard hardware is needed
