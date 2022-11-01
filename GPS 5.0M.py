@@ -52,7 +52,6 @@ def trainning():
     best_MM_auc = MM_auc
 
     file = "traningout_first_" + str(fold) + ".txt"
-    # AAscores和MM_coef的乘积才是最终的矩阵，所以矩阵要在更新之前
     writeParameter_MM(file, 10, 10, AAscores, l_aas, weight_coef, MM_coef, MM_auc)
 
     AAscores = newAAScore(AAscores, l_aas, AAs, MM_coef)
@@ -77,7 +76,6 @@ def trainning():
         if MM_auc > best_MM_auc:
             best_MM_auc = MM_auc
             file2 = "traningout_MM_best_" + str(fold) + "_" + str(i+1) + ".txt"
-            # AAscores和MM_coef的乘积才是最终的矩阵，所以矩阵要在更新之前
             writeParameter_MM(file2, 30, 30, AAscores, l_aas, weight_coef, MM_coef, MM_auc)
         else:
             break
