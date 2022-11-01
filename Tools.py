@@ -25,6 +25,7 @@ def blosum62():
         num += 1
     return scores,l_AAS,AAs
 
+
 def getWeightScoreType(pos, neg, matrix, AAs,length):
     scores = []
     for i in range(length*2+1):
