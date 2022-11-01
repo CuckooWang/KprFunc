@@ -96,6 +96,9 @@ def dnn(X,Y,nfold,parameter,PEP,a):
         Y_train, Y_test = Y[train_index], Y[test_index]
 
         model = create_model(parameter)
+        original_model = load_model("original.model")
+        for i in range(5):
+            model.layers[i].set_weights(original_model.layers[i].get_weights())
         model.fit(X_train, Y_train, epochs=300, batch_size=8,validation_data=(X_test,Y_test),verbose=1,
                   callbacks=[EarlyStopping(monitor="val_auc", mode="max", min_delta=0, patience=10),
                              ModelCheckpoint(str(a+1) + "_" + str(num) +'.model', monitor="val_auc", mode="max", save_best_only=True)])
