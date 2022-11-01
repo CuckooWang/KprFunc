@@ -164,7 +164,7 @@ def getMMScoreType(pos, neg, matrix, weights, l_aas, AAs,length):
                     score[index] += matrix[aas2] * weights[i]
             scoreneg = np.array(score)
             index2 = l_aas.index(aa1 + "_" + aa1)
-            score[index2] -= matrix[aa1 + "_" + aa1] * weights[i]
+            score[index2] -= matrix[aa1 +"_" + aa1] * weights[i]
             scorepos = np.array(score)
 
             score_pos.append(scorepos)
