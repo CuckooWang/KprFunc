@@ -76,6 +76,7 @@ def dnn(X,Y,nfold,parameter,PEP):
     auc_all = roc_auc_score(np.array(Y_last), np.array(Score_last))
     return auc_all,best_model
 
+
 def create_model(parameter):
     model = Sequential()
     model.add(Dense(parameter[0], activation='linear', input_dim=parameter[3]))
