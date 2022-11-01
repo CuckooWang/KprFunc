@@ -94,11 +94,12 @@ def dnn(X,Y,nfold,parameter,PEP,a):
         print("dnn_" + str(num))
         X_train, X_test = X[train_index], X[test_index]
         Y_train, Y_test = Y[train_index], Y[test_index]
-
-        model = create_model(parameter)
-        original_model = load_model("original.model")
-        for i in range(5):
-            model.layers[i].set_weights(original_model.layers[i].get_weights())
+        
+        model = load_model("original.model")
+        for i in range(6):
+            model.layers[i].trainable = False
+        model.compile(optimizer=optimizers.Adam(lr=1e-3, decay=3e-5), loss='binary_crossentropy',
+                      metrics=[metrics.AUC(name="auc")])
         model.fit(X_train, Y_train, epochs=300, batch_size=8,validation_data=(X_test,Y_test),verbose=1,
                   callbacks=[EarlyStopping(monitor="val_auc", mode="max", min_delta=0, patience=10),
                              ModelCheckpoint(str(a+1) + "_" + str(num) +'.model', monitor="val_auc", mode="max", save_best_only=True)])
@@ -114,17 +115,5 @@ def dnn(X,Y,nfold,parameter,PEP,a):
     auc_all = roc_auc_score(np.array(Y_last), np.array(Score_last))
     return auc_all,best_model
 
-def create_model(parameter):
-    model = Sequential()
-    model.add(Dense(parameter[0], activation='linear', input_dim=parameter[3]))
-    model.add(Dropout(parameter[1]))
-    for i in range(parameter[2]):
-        fold = 2 ** (i+1)
-        model.add(Dense(parameter[0] / fold,activation='linear'))
-        model.add(Dropout(parameter[1]))
-    model.add(Dense(1, activation='sigmoid'))
-    model.compile(optimizer=optimizers.Adam(lr=1e-3,decay=3e-5), loss='binary_crossentropy', metrics=[metrics.AUC(name="auc")])
-    model.summary()
-    return model
 
 fetshot()
