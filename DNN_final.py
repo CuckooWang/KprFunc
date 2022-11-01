@@ -83,7 +83,7 @@ def create_model(parameter):
     model.add(Dropout(parameter[1]))
     for i in range(parameter[2]):
         fold = 2 ** (i+1)
-        model.add(Dense(parameter[0] / fold,activation='linear'))
+        model.add(Dense(parameter[0]/ fold,activation='linear'))
         model.add(Dropout(parameter[1]))
     model.add(Dense(1, activation='sigmoid'))
     model.compile(optimizer=optimizers.Adam(lr=1e-3,decay=3e-5), loss='binary_crossentropy', metrics=[metrics.AUC(name="auc")])
