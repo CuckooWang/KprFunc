@@ -4,7 +4,7 @@ from sklearn.metrics import roc_auc_score
 from sklearn.linear_model import LogisticRegressionCV
 from sklearn.linear_model import LogisticRegression
 
-def trainning():
+def trainning(): 
     length = 30
     fold = 10
     f1 = open(r"POS.txt", "r")
